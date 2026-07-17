@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stopwatch</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0f0f0f;
+      --surface:  #1a1a1a;
+      --border:   #2a2a2a;
+      --text:     #e8e8e8;
+      --muted:    #555;
+      --accent:   #e8e8e8;
+      --green:    #4caf7d;
+      --red:      #e05c5c;
+      --blue:     #5b9cf6;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 48px 16px 32px;
+    }
+
+    /* ── Time Display ───────────────────────────────────── */
+    #display {
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+      font-size: clamp(3.5rem, 12vw, 7rem);
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      user-select: none;
+      line-height: 1;
+      margin-bottom: 48px;
+      transition: color 0.15s;
+    }
+
+    #display.running { color: var(--green); }
+    #display .ms     { font-size: 0.55em; opacity: 0.65; }
+
+    /* ── Buttons ────────────────────────────────────────── */
+    .controls {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      padding: 14px 32px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.08s;
+      min-width: 100px;
+    }
+
+    button:active { transform: scale(0.96); }
+
+    #btn-start {
+      background: var(--green);
+      border-color: var(--green);
+      color: #0f0f0f;
+    }
+    #btn-start.stop {
+      background: var(--red);
+      border-color: var(--red);
+      color: #fff;
+    }
+    #btn-lap:not(:disabled) {
+      color: var(--blue);
+      border-color: var(--blue);
+    }
+    #btn-reset:not(:disabled) {
+      color: var(--text);
+      border-color: #444;
+    }
+    button:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── Lap List ───────────────────────────────────────── */
+    #lap-section {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .lap-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 0 4px 10px;
+      font-size: 0.7rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    #lap-list {
+      list-style: none;
+      overflow-y: auto;
+      max-height: 40vh;
+    }
+
+    #lap-list::-webkit-scrollbar { width: 4px; }
+    #lap-list::-webkit-scrollbar-track { background: transparent; }
+    #lap-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    #lap-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 4px;
+      border-bottom: 1px solid var(--border);
+      font-family: "SF Mono", "Fira Code", "Cascadia Code", "Consolas", monospace;
+      font-size: 0.9rem;
+      animation: fadeIn 0.2s ease;
+    }
+
+    #lap-list li:first-child { border-top: none; }
+
+    .lap-num  { color: var(--muted); font-size: 0.75rem; width: 40px; }
+    .lap-split { color: var(--text); flex: 1; text-align: center; }
+    .lap-total { color: var(--muted); font-size: 0.85rem; width: 80px; text-align: right; }
+
+    .lap-best  .lap-split { color: var(--green); }
+    .lap-worst .lap-split { color: var(--red); }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="display">
+    <span id="time-hms">00:00</span><span class="ms">.<span id="time-ms">00</span></span>
+  </div>
+
+  <div class="controls">
+    <button id="btn-start">Start</button>
+    <button id="btn-lap" disabled>Lap</button>
+    <button id="btn-reset" disabled>Reset</button>
+  </div>
+
+  <section id="lap-section" hidden>
+    <div class="lap-header">
+      <span>Lap</span>
+      <span style="flex:1;text-align:center">Split</span>
+      <span>Total</span>
+    </div>
+    <ul id="lap-list"></ul>
+  </section>
+
+  <script>
+    // ── State ──────────────────────────────────────────────
+    let startTime   = 0;   // performance.now() when last started
+    let accumulated = 0;   // ms accumulated before last pause
+    let lapMark     = 0;   // accumulated ms at last lap
+    let running     = false;
+    let rafId       = null;
+
+    const laps = [];       // [{split, total}]
+
+    // ── DOM refs ───────────────────────────────────────────
+    const display    = document.getElementById('display');
+    const timeHMS    = document.getElementById('time-hms');
+    const timeMS     = document.getElementById('time-ms');
+    const btnStart   = document.getElementById('btn-start');
+    const btnLap     = document.getElementById('btn-lap');
+    const btnReset   = document.getElementById('btn-reset');
+    const lapSection = document.getElementById('lap-section');
+    const lapList    = document.getElementById('lap-list');
+
+    // ── Helpers ────────────────────────────────────────────
+    function elapsed() {
+      return running ? accumulated + (performance.now() - startTime) : accumulated;
+    }
+
+    function fmt(ms) {
+      const totalCs = Math.floor(ms / 10);
+      const cs      = totalCs % 100;
+      const secs    = Math.floor(totalCs / 100);
+      const s       = secs % 60;
+      const mins    = Math.floor(secs / 60);
+      const m       = mins % 60;
+      const h       = Math.floor(mins / 60);
+
+      const hms = h > 0
+        ? `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+        : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+      return { hms, cs: String(cs).padStart(2,'0') };
+    }
+
+    function updateDisplay() {
+      const { hms, cs } = fmt(elapsed());
+      timeHMS.textContent = hms;
+      timeMS.textContent  = cs;
+    }
+
+    function tick() {
+      updateDisplay();
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function renderLaps() {
+      if (laps.length === 0) { lapSection.hidden = true; return; }
+      lapSection.hidden = false;
+
+      const splits  = laps.map(l => l.split);
+      const minSplit = Math.min(...splits);
+      const maxSplit = Math.max(...splits);
+
+      lapList.innerHTML = '';
+      // newest lap first
+      for (let i = laps.length - 1; i >= 0; i--) {
+        const { split, total } = laps[i];
+        const li = document.createElement('li');
+
+        let cls = '';
+        if (laps.length > 1) {
+          if (split === minSplit) cls = 'lap-best';
+          else if (split === maxSplit) cls = 'lap-worst';
+        }
+        if (cls) li.classList.add(cls);
+
+        li.innerHTML = `
+          <span class="lap-num">#${i + 1}</span>
+          <span class="lap-split">${fmt(split).hms}<span style="opacity:.55">.${fmt(split).cs}</span></span>
+          <span class="lap-total">${fmt(total).hms}<span style="opacity:.45">.${fmt(total).cs}</span></span>
+        `;
+        lapList.appendChild(li);
+      }
+    }
+
+    // ── Controls ───────────────────────────────────────────
+    btnStart.addEventListener('click', () => {
+      if (!running) {
+        startTime = performance.now();
+        running   = true;
+        display.classList.add('running');
+        btnStart.textContent = 'Stop';
+        btnStart.classList.add('stop');
+        btnLap.disabled   = false;
+        btnReset.disabled = true;
+        tick();
+      } else {
+        accumulated = elapsed();
+        running     = false;
+        cancelAnimationFrame(rafId);
+        display.classList.remove('running');
+        btnStart.textContent = 'Start';
+        btnStart.classList.remove('stop');
+        btnLap.disabled   = true;
+        btnReset.disabled = false;
+        updateDisplay();
+      }
+    });
+
+    btnLap.addEventListener('click', () => {
+      if (!running) return;
+      const now   = elapsed();
+      const split = now - lapMark;
+      lapMark     = now;
+      laps.push({ split, total: now });
+      renderLaps();
+    });
+
+    btnReset.addEventListener('click', () => {
+      accumulated = 0;
+      lapMark     = 0;
+      laps.length = 0;
+      updateDisplay();
+      renderLaps();
+      btnReset.disabled = true;
+      btnLap.disabled   = true;
+    });
+
+    // init
+    updateDisplay();
+  </script>
+</body>
+</html>
