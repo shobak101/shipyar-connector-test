@@ -18,3 +18,5 @@ open index.html        # macOS
 xdg-open index.html    # Linux
 start index.html       # Windows
 ```
+
+Edited via the Shipyard IDE prod validation (2026-07-17).
