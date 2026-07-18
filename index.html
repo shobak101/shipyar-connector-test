@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -19,6 +19,18 @@
       --blue:     #5b9cf6;
     }
 
+    [data-theme="light"] {
+      --bg:      #f5f5f5;
+      --surface: #ffffff;
+      --border:  #d8d8d8;
+      --text:    #1a1a1a;
+      --muted:   #999;
+      --accent:  #1a1a1a;
+      --green:   #2e8c56;
+      --red:     #c94040;
+      --blue:    #2d6fd4;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -29,7 +41,35 @@
       align-items: center;
       justify-content: flex-start;
       padding: 48px 16px 32px;
+      transition: background 0.2s, color 0.2s;
     }
+
+    /* ── Theme Toggle ───────────────────────────────────── */
+    #theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 1.2rem;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s, border-color 0.2s, color 0.15s, transform 0.08s;
+      padding: 0;
+      min-width: unset;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: normal;
+      line-height: 1;
+    }
+    #theme-toggle:hover { color: var(--text); border-color: var(--text); }
+    #theme-toggle:active { transform: scale(0.9); }
 
     /* ── Time Display ───────────────────────────────────── */
     #display {
@@ -75,7 +115,7 @@
     #btn-start {
       background: var(--green);
       border-color: var(--green);
-      color: #0f0f0f;
+      color: #fff;
     }
     #btn-start.stop {
       background: var(--red);
@@ -147,6 +187,8 @@
 </head>
 <body>
 
+  <button id="theme-toggle" title="Toggle dark / light mode">🌙</button>
+
   <div id="display">
     <span id="time-hms">00:00</span><span class="ms">.<span id="time-ms">00</span></span>
   </div>
@@ -177,14 +219,32 @@
     const laps = [];       // [{split, total}]
 
     // ── DOM refs ───────────────────────────────────────────
-    const display    = document.getElementById('display');
-    const timeHMS    = document.getElementById('time-hms');
-    const timeMS     = document.getElementById('time-ms');
-    const btnStart   = document.getElementById('btn-start');
-    const btnLap     = document.getElementById('btn-lap');
-    const btnReset   = document.getElementById('btn-reset');
-    const lapSection = document.getElementById('lap-section');
-    const lapList    = document.getElementById('lap-list');
+    const display      = document.getElementById('display');
+    const timeHMS      = document.getElementById('time-hms');
+    const timeMS       = document.getElementById('time-ms');
+    const btnStart     = document.getElementById('btn-start');
+    const btnLap       = document.getElementById('btn-lap');
+    const btnReset     = document.getElementById('btn-reset');
+    const lapSection   = document.getElementById('lap-section');
+    const lapList      = document.getElementById('lap-list');
+    const themeToggle  = document.getElementById('theme-toggle');
+
+    // ── Theme ──────────────────────────────────────────────
+    const html = document.documentElement;
+
+    function applyTheme(theme) {
+      html.setAttribute('data-theme', theme);
+      themeToggle.textContent = theme === 'dark' ? '🌙' : '☀️';
+      localStorage.setItem('sw-theme', theme);
+    }
+
+    themeToggle.addEventListener('click', () => {
+      applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    // Restore saved preference
+    const savedTheme = localStorage.getItem('sw-theme');
+    if (savedTheme) applyTheme(savedTheme);
 
     // ── Helpers ────────────────────────────────────────────
     function elapsed() {
