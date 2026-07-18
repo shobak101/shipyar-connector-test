@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tip Calculator</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f4f8;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: #1a1a2e;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.10), 0 2px 8px rgba(0, 0, 0, 0.06);
+      padding: 40px 36px 36px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .card-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .card-header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      letter-spacing: -0.5px;
+    }
+
+    .card-header h1 span {
+      color: #00b4a6;
+    }
+
+    .card-header p {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 4px;
+    }
+
+    /* ── Section labels ── */
+    .field-label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+
+    /* ── Field groups ── */
+    .field-group {
+      margin-bottom: 28px;
+    }
+
+    /* ── Bill input ── */
+    .bill-wrapper {
+      position: relative;
+    }
+
+    .bill-wrapper .currency {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #00b4a6;
+      pointer-events: none;
+    }
+
+    .bill-input {
+      width: 100%;
+      padding: 14px 16px 14px 34px;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+
+    .bill-input:focus {
+      border-color: #00b4a6;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(0, 180, 166, 0.12);
+    }
+
+    /* ── Tip slider ── */
+    .tip-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .tip-value-badge {
+      background: #00b4a6;
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 20px;
+      min-width: 52px;
+      text-align: center;
+    }
+
+    /* Quick tip buttons */
+    .quick-tips {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .quick-tip-btn {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      background: #f0f4f8;
+      border: 2px solid transparent;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+    }
+
+    .quick-tip-btn:hover {
+      background: #e0f7f5;
+      border-color: #00b4a6;
+      color: #00b4a6;
+    }
+
+    .quick-tip-btn.active {
+      background: #00b4a6;
+      border-color: #00b4a6;
+      color: #fff;
+    }
+
+    /* Slider */
+    .slider-wrapper {
+      position: relative;
+      padding: 6px 0;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 6px;
+      background: #e2e8f0;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #00b4a6;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 180, 166, 0.45);
+      border: 3px solid #fff;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      box-shadow: 0 4px 14px rgba(0, 180, 166, 0.55);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #00b4a6;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 180, 166, 0.45);
+      border: 3px solid #fff;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+
+    .slider-labels span {
+      font-size: 0.72rem;
+      color: #9ca3af;
+    }
+
+    /* ── Party size stepper ── */
+    .stepper {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 14px;
+      overflow: hidden;
+      width: fit-content;
+    }
+
+    .stepper-btn {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 400;
+      color: #1a1a2e;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+      line-height: 1;
+    }
+
+    .stepper-btn:hover {
+      background: #e0f7f5;
+      color: #00b4a6;
+    }
+
+    .stepper-btn:active {
+      background: #00b4a6;
+      color: #fff;
+    }
+
+    .stepper-btn:disabled {
+      color: #d1d5db;
+      cursor: not-allowed;
+    }
+
+    .stepper-btn:disabled:hover {
+      background: transparent;
+    }
+
+    .stepper-value {
+      min-width: 52px;
+      text-align: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1a1a2e;
+      border-left: 2px solid #e2e8f0;
+      border-right: 2px solid #e2e8f0;
+      padding: 0 8px;
+      line-height: 48px;
+    }
+
+    /* ── Divider ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(to right, transparent, #e2e8f0, transparent);
+      margin: 28px 0;
+    }
+
+    /* ── Results ── */
+    .result-primary {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .result-primary .result-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .result-primary .amount {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #1a1a2e;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      transition: color 0.2s;
+    }
+
+    .result-primary .amount span {
+      color: #00b4a6;
+    }
+
+    .result-primary .per-person-sub {
+      font-size: 0.82rem;
+      color: #9ca3af;
+      margin-top: 4px;
+    }
+
+    .result-secondary {
+      display: flex;
+      gap: 12px;
+    }
+
+    .result-secondary .result-box {
+      flex: 1;
+      background: #f8fafc;
+      border-radius: 14px;
+      padding: 14px 16px;
+      text-align: center;
+      border: 1px solid #e2e8f0;
+    }
+
+    .result-secondary .result-box .box-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    .result-secondary .result-box .box-amount {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    .result-secondary .result-box.tip-box .box-amount {
+      color: #00b4a6;
+    }
+
+    /* ── Footer ── */
+    .card-footer {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 0.75rem;
+      color: #d1d5db;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .card {
+        padding: 28px 20px 24px;
+        border-radius: 18px;
+      }
+
+      .result-primary .amount {
+        font-size: 2rem;
+      }
+
+      .quick-tips {
+        gap: 6px;
+      }
+
+      .quick-tip-btn {
+        font-size: 0.78rem;
+        padding: 7px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <h1>Tip <span>Calculator</span></h1>
+      <p>Split the bill, effortlessly.</p>
+    </div>
+
+    <!-- Bill Amount -->
+    <div class="field-group">
+      <label class="field-label" for="billInput">Bill Amount</label>
+      <div class="bill-wrapper">
+        <span class="currency">$</span>
+        <input
+          class="bill-input"
+          type="number"
+          id="billInput"
+          placeholder="0.00"
+          min="0"
+          step="0.01"
+        />
+      </div>
+    </div>
+
+    <!-- Tip % -->
+    <div class="field-group">
+      <div class="tip-header">
+        <label class="field-label" for="tipSlider" style="margin-bottom:0">Tip %</label>
+        <div class="tip-value-badge" id="tipBadge">18%</div>
+      </div>
+
+      <!-- Quick tip buttons -->
+      <div class="quick-tips">
+        <button class="quick-tip-btn" data-tip="15">15%</button>
+        <button class="quick-tip-btn active" data-tip="18">18%</button>
+        <button class="quick-tip-btn" data-tip="20">20%</button>
+        <button class="quick-tip-btn" data-tip="25">25%</button>
+      </div>
+
+      <div class="slider-wrapper">
+        <input type="range" id="tipSlider" min="0" max="30" step="1" value="18" />
+      </div>
+      <div class="slider-labels">
+        <span>0%</span>
+        <span>15%</span>
+        <span>30%</span>
+      </div>
+    </div>
+
+    <!-- Party Size -->
+    <div class="field-group">
+      <label class="field-label">Party Size</label>
+      <div class="stepper">
+        <button class="stepper-btn" id="decreaseBtn" aria-label="Decrease party size" disabled>−</button>
+        <div class="stepper-value" id="partySizeDisplay">1</div>
+        <button class="stepper-btn" id="increaseBtn" aria-label="Increase party size">+</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Results -->
+    <div class="result-primary">
+      <div class="result-label">Per Person</div>
+      <div class="amount" id="perPersonAmount"><span>$</span>0.00</div>
+      <div class="per-person-sub" id="perPersonSub">for 1 person</div>
+    </div>
+
+    <div class="result-secondary">
+      <div class="result-box tip-box">
+        <div class="box-label">Total Tip</div>
+        <div class="box-amount" id="totalTip">$0.00</div>
+      </div>
+      <div class="result-box">
+        <div class="box-label">Total Bill</div>
+        <div class="box-amount" id="totalBill">$0.00</div>
+      </div>
+    </div>
+
+    <div class="card-footer">Made with ♥ — works offline</div>
+  </div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────────────────
+    let partySize = 1;
+    const MIN_PARTY = 1;
+    const MAX_PARTY = 20;
+
+    // ── Element refs ───────────────────────────────────────────────────────────
+    const billInput         = document.getElementById('billInput');
+    const tipSlider         = document.getElementById('tipSlider');
+    const tipBadge          = document.getElementById('tipBadge');
+    const decreaseBtn       = document.getElementById('decreaseBtn');
+    const increaseBtn       = document.getElementById('increaseBtn');
+    const partySizeDisplay  = document.getElementById('partySizeDisplay');
+    const perPersonAmount   = document.getElementById('perPersonAmount');
+    const perPersonSub      = document.getElementById('perPersonSub');
+    const totalTipEl        = document.getElementById('totalTip');
+    const totalBillEl       = document.getElementById('totalBill');
+    const quickTipBtns      = document.querySelectorAll('.quick-tip-btn');
+
+    // ── Formatting helper ──────────────────────────────────────────────────────
+    function fmt(value) {
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    // ── Core calculation ───────────────────────────────────────────────────────
+    function calculate() {
+      const bill    = Math.max(0, parseFloat(billInput.value) || 0);
+      const tipPct  = parseInt(tipSlider.value, 10);
+      const tip     = bill * (tipPct / 100);
+      const total   = bill + tip;
+      const perPerson = total / partySize;
+
+      // Update badge
+      tipBadge.textContent = tipPct + '%';
+
+      // Update slider fill (gradient trick)
+      const pct = (tipPct / 30) * 100;
+      tipSlider.style.background =
+        `linear-gradient(to right, #00b4a6 ${pct}%, #e2e8f0 ${pct}%)`;
+
+      // Per-person display
+      perPersonAmount.innerHTML = `<span>$</span>${fmt(perPerson)}`;
+      perPersonSub.textContent  =
+        partySize === 1 ? 'for 1 person' : `split among ${partySize} people`;
+
+      // Secondary amounts
+      totalTipEl.textContent  = '$' + fmt(tip);
+      totalBillEl.textContent = '$' + fmt(total);
+
+      // Sync quick-tip buttons
+      quickTipBtns.forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.tip, 10) === tipPct);
+      });
+    }
+
+    // ── Stepper logic ──────────────────────────────────────────────────────────
+    function updateStepper() {
+      partySizeDisplay.textContent = partySize;
+      decreaseBtn.disabled = partySize <= MIN_PARTY;
+      increaseBtn.disabled = partySize >= MAX_PARTY;
+      calculate();
+    }
+
+    decreaseBtn.addEventListener('click', () => {
+      if (partySize > MIN_PARTY) { partySize--; updateStepper(); }
+    });
+
+    increaseBtn.addEventListener('click', () => {
+      if (partySize < MAX_PARTY) { partySize++; updateStepper(); }
+    });
+
+    // ── Quick-tip buttons ──────────────────────────────────────────────────────
+    quickTipBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tipSlider.value = btn.dataset.tip;
+        calculate();
+      });
+    });
+
+    // ── Input listeners ────────────────────────────────────────────────────────
+    billInput.addEventListener('input', calculate);
+    tipSlider.addEventListener('input', calculate);
+
+    // Prevent negative values in bill input
+    billInput.addEventListener('blur', () => {
+      if (billInput.value !== '' && parseFloat(billInput.value) < 0) {
+        billInput.value = '0.00';
+        calculate();
+      }
+    });
+
+    // ── Initial render ─────────────────────────────────────────────────────────
+    calculate();
+  </script>
+</body>
+</html>
