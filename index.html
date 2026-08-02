@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Focus Flow — Habit Streak Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0f1117;
+      --surface:   #1a1d27;
+      --card:      #22263a;
+      --border:    #2e3352;
+      --accent:    #6c63ff;
+      --accent2:   #ff6584;
+      --green:     #3ecf8e;
+      --muted:     #6b7280;
+      --text:      #e8eaf0;
+      --text-dim:  #9ca3af;
+      --radius:    14px;
+      --shadow:    0 4px 24px rgba(0,0,0,.45);
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 16px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: .9rem;
+    }
+
+    /* ── Date banner ── */
+    #date-banner {
+      font-size: .82rem;
+      color: var(--text-dim);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 18px;
+      margin-bottom: 32px;
+    }
+
+    /* ── Add habit form ── */
+    #add-form {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 32px;
+    }
+    #habit-input {
+      flex: 1;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    #habit-input::placeholder { color: var(--muted); }
+    #habit-input:focus { border-color: var(--accent); }
+
+    #add-btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      white-space: nowrap;
+    }
+    #add-btn:hover  { opacity: .88; }
+    #add-btn:active { transform: scale(.96); }
+
+    /* ── Empty state ── */
+    #empty {
+      color: var(--muted);
+      font-size: .95rem;
+      margin-top: 48px;
+      text-align: center;
+      line-height: 1.7;
+    }
+    #empty span { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+    /* ── Habit list ── */
+    #habits-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+      max-width: 560px;
+    }
+
+    /* ── Habit card ── */
+    .habit-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 12px 12px;
+      align-items: center;
+      transition: border-color .2s;
+    }
+    .habit-card.done {
+      border-color: var(--green);
+    }
+
+    /* name row */
+    .habit-name {
+      font-size: 1.05rem;
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    /* check button */
+    .check-btn {
+      grid-row: 1;
+      grid-column: 2;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: 2.5px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s, border-color .2s, color .2s, transform .12s;
+      flex-shrink: 0;
+    }
+    .check-btn:hover { border-color: var(--green); color: var(--green); }
+    .check-btn.checked {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .check-btn:active { transform: scale(.9); }
+
+    /* streak row */
+    .streak-row {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .streak-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .82rem;
+      color: var(--text-dim);
+    }
+    .streak-pill .icon { font-size: 1rem; }
+    .streak-pill .value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .streak-pill.fire .value { color: var(--accent2); }
+    .streak-pill.trophy .value { color: #fbbf24; }
+
+    /* delete btn */
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .8rem;
+      padding: 2px 6px;
+      border-radius: 6px;
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity .2s, color .15s;
+    }
+    .habit-card:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { color: var(--accent2); }
+
+    /* ── Mini dot calendar (last 7 days) ── */
+    .dot-row {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .dot.filled { background: var(--green); }
+    .dot.today  { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+    /* ── Responsive ── */
+    @media (max-width: 400px) {
+      header h1 { font-size: 1.5rem; }
+      #add-btn  { padding: 12px 14px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🔥 Habit Streak Tracker</h1>
+  <p>Build consistency, one day at a time.</p>
+</header>
+
+<div id="date-banner"></div>
+
+<form id="add-form" onsubmit="addHabit(event)">
+  <input id="habit-input" type="text" placeholder="New habit… e.g. Drink water 💧" maxlength="60" autocomplete="off" />
+  <button id="add-btn" type="submit">+ Add</button>
+</form>
+
+<div id="empty" style="display:none">
+  <span>🌱</span>
+  No habits yet.<br>Add your first habit above to get started!
+</div>
+
+<div id="habits-list"></div>
+
+<script>
+  // ── State ──────────────────────────────────────────────────────────────────
+  const STORAGE_KEY = 'habit-tracker-v2';
+
+  function loadData() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(habits));
+  }
+
+  // habit shape:
+  // { id, name, createdAt (YYYY-MM-DD), checkDates: Set<YYYY-MM-DD> serialised as array }
+  let habits = loadData().map(h => ({ ...h, checkDates: new Set(h.checkDates) }));
+
+  // ── Date helpers ───────────────────────────────────────────────────────────
+  function today() {
+    const d = new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+  function pad(n) { return String(n).padStart(2,'0'); }
+  function dateLabel(d) {
+    return new Date(d + 'T00:00:00').toLocaleDateString(undefined,
+      { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+
+  // ── Streak calculation ────────────────────────────────────────────────────
+  function calcStreaks(habit) {
+    const t = today();
+    const sorted = [...habit.checkDates].sort();
+    if (sorted.length === 0) return { current: 0, best: 0 };
+
+    // current streak: count backwards from today (or yesterday if today not checked)
+    let current = 0;
+    let cursor = habit.checkDates.has(t) ? t : addDays(t, -1);
+    while (habit.checkDates.has(cursor)) {
+      current++;
+      cursor = addDays(cursor, -1);
+    }
+
+    // best streak
+    let best = 0, run = 1;
+    for (let i = 1; i < sorted.length; i++) {
+      if (addDays(sorted[i-1], 1) === sorted[i]) {
+        run++;
+      } else {
+        best = Math.max(best, run);
+        run = 1;
+      }
+    }
+    best = Math.max(best, run);
+
+    return { current, best };
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function render() {
+    const t = today();
+    document.getElementById('date-banner').textContent = dateLabel(t);
+
+    const list = document.getElementById('habits-list');
+    const empty = document.getElementById('empty');
+
+    if (habits.length === 0) {
+      list.innerHTML = '';
+      empty.style.display = '';
+      return;
+    }
+    empty.style.display = 'none';
+
+    list.innerHTML = '';
+    habits.forEach(habit => {
+      const { current, best } = calcStreaks(habit);
+      const done = habit.checkDates.has(t);
+
+      // last 7 days dots
+      let dots = '';
+      for (let i = 6; i >= 0; i--) {
+        const d = addDays(t, -i);
+        const filled = habit.checkDates.has(d) ? 'filled' : '';
+        const isToday = d === t ? 'today' : '';
+        dots += `<div class="dot ${filled} ${isToday}" title="${d}"></div>`;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'habit-card' + (done ? ' done' : '');
+      card.dataset.id = habit.id;
+      card.innerHTML = `
+        <div class="habit-name">${escHtml(habit.name)}</div>
+        <button class="check-btn ${done ? 'checked' : ''}"
+                onclick="toggleCheck('${habit.id}')"
+                title="${done ? 'Mark undone' : 'Mark done for today'}">
+          ${done ? '✓' : '○'}
+        </button>
+        <div class="streak-row">
+          <div class="streak-pill fire">
+            <span class="icon">🔥</span>
+            <span class="value">${current}</span>
+            <span>current streak</span>
+          </div>
+          <div class="streak-pill trophy">
+            <span class="icon">🏆</span>
+            <span class="value">${best}</span>
+            <span>best streak</span>
+          </div>
+          <div class="dot-row" title="Last 7 days">${dots}</div>
+          <button class="delete-btn" onclick="deleteHabit('${habit.id}')" title="Delete habit">✕</button>
+        </div>
+      `;
+      list.appendChild(card);
+    });
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+  function addHabit(e) {
+    e.preventDefault();
+    const input = document.getElementById('habit-input');
+    const name = input.value.trim();
+    if (!name) return;
+    habits.push({
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      name,
+      createdAt: today(),
+      checkDates: new Set()
+    });
+    saveData();
+    render();
+    input.value = '';
+    input.focus();
+  }
+
+  function toggleCheck(id) {
+    const t = today();
+    const h = habits.find(x => x.id === id);
+    if (!h) return;
+    if (h.checkDates.has(t)) {
+      h.checkDates.delete(t);
+    } else {
+      h.checkDates.add(t);
+    }
+    saveData();
+    render();
+  }
+
+  function deleteHabit(id) {
+    habits = habits.filter(x => x.id !== id);
+    saveData();
+    render();
+  }
+
+  // ── Serialise Sets for localStorage ──────────────────────────────────────
+  const _save = saveData;
+  function saveData() {
+    const serialised = habits.map(h => ({
+      ...h,
+      checkDates: [...h.checkDates]
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serialised));
+  }
+
+  // ── Boot ───────────────────────────────────────────────────────────────────
+  render();
+  document.getElementById('habit-input').focus();
+</script>
+</body>
+</html>
