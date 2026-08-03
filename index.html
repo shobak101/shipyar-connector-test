@@ -226,6 +226,22 @@
     .dot.filled { background: var(--green); }
     .dot.today  { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+    /* ── Confetti ── */
+    .confetti-piece {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      pointer-events: none;
+      animation: confetti-fall var(--dur, 1.1s) ease-out forwards;
+      z-index: 9999;
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translate(0,0) rotate(0deg) scale(1); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(.6); opacity: 0; }
+    }
+
     /* ── Responsive ── */
     @media (max-width: 400px) {
       header h1 { font-size: 1.5rem; }
@@ -399,13 +415,53 @@
     const t = today();
     const h = habits.find(x => x.id === id);
     if (!h) return;
-    if (h.checkDates.has(t)) {
+    const wasChecked = h.checkDates.has(t);
+    if (wasChecked) {
       h.checkDates.delete(t);
     } else {
       h.checkDates.add(t);
     }
     saveData();
     render();
+    // Fire confetti when the check-off brings the current streak to exactly 7
+    if (!wasChecked) {
+      const { current } = calcStreaks(h);
+      if (current === 7) {
+        const card = document.querySelector(`.habit-card[data-id="${id}"]`);
+        launchConfetti(card);
+      }
+    }
+  }
+
+  // ── Confetti burst ─────────────────────────────────────────────────────────
+  function launchConfetti(originEl) {
+    const colors = ['#6c63ff','#ff6584','#3ecf8e','#fbbf24','#38bdf8','#f472b6'];
+    const count = 38;
+    // origin: centre of the card, or centre of viewport as fallback
+    let ox = window.innerWidth / 2, oy = window.innerHeight / 2;
+    if (originEl) {
+      const r = originEl.getBoundingClientRect();
+      ox = r.left + r.width / 2;
+      oy = r.top + r.height / 2;
+    }
+    for (let i = 0; i < count; i++) {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      // random spread: angle full 360°, distance 60–160 px
+      const angle = Math.random() * 2 * Math.PI;
+      const dist  = 60 + Math.random() * 100;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 40; // bias upward slightly
+      const dur  = 0.8 + Math.random() * 0.5;
+      const rot  = (Math.random() - 0.5) * 540 + 'deg';
+      el.style.cssText = `
+        left:${ox}px; top:${oy}px;
+        background:${colors[i % colors.length]};
+        --dx:${dx}px; --dy:${dy}px; --rot:${rot}; --dur:${dur}s;
+      `;
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove());
+    }
   }
 
   function deleteHabit(id) {
